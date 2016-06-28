@@ -37,6 +37,11 @@ namespace ofx {
             int saved;
         };
         
+        struct z_depth {
+            z_depth() { ofEnableDepthTest(); }
+            ~z_depth() { ofDisableDepthTest(); }
+        };
+        
         struct line_width {
             line_width(float width = ofGetStyle().lineWidth)
             : width(ofGetStyle().lineWidth) { ofSetLineWidth(width); }
