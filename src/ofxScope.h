@@ -5,6 +5,10 @@
 //
 //
 
+#ifndef ofxScope_h
+#define ofxScope_h
+#endif
+
 #pragma once
 
 #include <tuple>
@@ -49,7 +53,7 @@ namespace ofx {
                     else glDisable(param);
                 }
             };
-
+            
             struct smoothing {
                 using value_type = bool;
                 inline value_type get() const
@@ -96,7 +100,7 @@ namespace ofx {
             struct matrix_mode {};
             struct poly_mode {};
 #endif
-
+            
             struct line_width {
                 using value_type = float;
                 inline value_type get() const
@@ -161,7 +165,7 @@ namespace ofx {
                 { ofSetPlaneResolution(res.x, res.y); };
             };
         } // end of namespace accessor
-        
+
         namespace scoped {
             struct base {
                 base() {};
@@ -324,22 +328,33 @@ namespace ofx {
         }; // end of namespace scoped
         
         namespace tag {
-            template <typename type>
+            template <typename type, typename creator = void>
             struct base {
                 using scoped_type = type;
                 static constexpr bool is_tag{true};
                 
                 scoped_type operator()() const
                 { return {}; };
-                inline void run(std::function<void()> body) const {
-                    scoped_type _;
-                    body();
-                };
+                inline void run(std::function<void()> body) const
+                { creator::create_scope().run(body); };
                 inline void operator()(std::function<void()> body) const
                 { run(body); };
             };
-            
+
             template <typename type>
+            struct base<type, void> {
+                using scoped_type = type;
+                static constexpr bool is_tag{true};
+                
+                scoped_type operator()() const
+                { return {}; };
+                inline void run(std::function<void()> body) const
+                { scoped_type()(body); };
+                inline void operator()(std::function<void()> body) const
+                { run(body); };
+            };
+
+            template <typename type, typename creator = void>
             struct no_arg : base<type> {};
             
             using matrix = no_arg<scoped::matrix>;
@@ -347,27 +362,40 @@ namespace ofx {
             using view = no_arg<scoped::view>;
             
             struct shape : base<scoped::shape> {
-                inline scoped_type operator()(bool close = false) const
-                { return { close }; };
+                inline scoped_type operator()(bool with_close = false) const
+                { return { with_close }; };
                 
-                struct open {
+                inline void operator()(std::function<void()> body) const
+                { scoped_type().run(body); };
+                inline void operator()(bool with_close, std::function<void()> body) const
+                { scoped_type(with_close).run(body); };
+
+                struct open_t : base<scoped_type, open_t> {
                     static scoped_type create_scope()
                     { return {}; };
-                };
-                struct closed {
+                } open;
+                struct closed_t : base<scoped_type, closed_t> {
                     static scoped_type create_scope()
                     { return { true }; };
-                };
+                } closed;
             };
             
             struct save_screen_as_pdf : base<scoped::save_screen_as_pdf> {
                 inline scoped_type operator()(const std::string &path) const
                 { return { path }; };
+                
+                inline void operator()(const std::string &path,
+                                       std::function<void()> body) const
+                { scoped_type(path).run(body); };
             };
             
             struct save_screen_as_svg : base<scoped::save_screen_as_svg> {
                 inline scoped_type operator()(const std::string &path) const
                 { return { path }; };
+                
+                inline void operator()(const std::string &path,
+                                       std::function<void()> body) const
+                { scoped_type(path).run(body); };
             };
             
             template <typename type>
@@ -375,15 +403,18 @@ namespace ofx {
                 using scoped_type = typename base<type>::scoped_type;
                 inline scoped_type operator()(bool enable) const
                 { return { enable }; };
-                
-                struct enabler {
+                inline void operator()(bool enable,
+                                       std::function<void()> body) const
+                { scoped_type(enable).run(body); };
+
+                struct enabler : base<scoped_type, enabler> {
                     static scoped_type create_scope()
                     {  return { true }; }
-                };
-                struct disabler {
+                } enable;
+                struct disabler : base<scoped_type, disabler> {
                     static scoped_type create_scope()
                     {  return { false }; }
-                };
+                } disable;
             };
             
             using depth_test    = bool_parameter<scoped::depth_test>;
@@ -396,56 +427,69 @@ namespace ofx {
             struct rect_mode : base<scoped::rect_mode> {
                 inline scoped_type operator()(ofRectMode mode) const
                 { return { mode }; };
+                inline void operator()(ofRectMode mode,
+                                       std::function<void()> body) const
+                { scoped_type(mode).run(body); };
+
                 
-                struct corner : base {
+                struct corner_t : base<scoped::rect_mode, corner_t> {
                     static scoped_type create_scope()
                     { return { OF_RECTMODE_CORNER }; };
-                };
-                struct center : base {
+                } corner;
+                struct center_t : base<scoped::rect_mode, center_t> {
                     static scoped_type create_scope()
                     { return { OF_RECTMODE_CENTER }; };
-                };
+                } center;
             };
             
             struct blend_mode : base<scoped::blend_mode> {
                 inline scoped_type operator()(ofBlendMode mode) const
                 { return { mode }; };
-                
-                struct alpha_blending : base {
+                inline void operator()(ofBlendMode mode,
+                                       std::function<void()> body) const
+                { scoped_type(mode).run(body); };
+
+                struct alpha_blending : base<scoped::blend_mode> {
                     using scoped_type = scoped::blend_mode;
                     inline scoped_type operator()() const
                     { return {}; };
                     inline scoped_type operator()(bool enable) const
                     { return { enable ? OF_BLENDMODE_ALPHA : OF_BLENDMODE_DISABLED }; };
                     
-                    struct enabler : base {
+                    struct enabler : base<scoped::blend_mode, enabler> {
                         static scoped_type create_scope()
                         { return { OF_BLENDMODE_ALPHA }; };
-                    };
-                    struct disabler : base {
+                    } enable;
+                    struct disabler : base<scoped::blend_mode, disabler> {
                         static scoped_type create_scope()
                         { return { OF_BLENDMODE_DISABLED }; };
-                    };
+                    } disable;
                 };
             };
             
             struct fill_mode : base<scoped::fill_mode> {
                 inline scoped_type operator()(ofFillFlag flag) const
                 { return { flag }; };
-                
-                struct no_fill : base {
+                inline void operator()(ofFillFlag flag,
+                                       std::function<void()> body) const
+                { scoped_type(flag).run(body); };
+
+                struct no_fill_t : base<scoped::fill_mode, no_fill_t> {
                     static scoped_type create_scope()
                     { return { OF_OUTLINE }; };
-                };
-                struct fill : base {
+                } noFill;
+                struct fill_t : base<scoped::fill_mode, fill_t> {
                     static scoped_type create_scope()
                     { return { OF_FILLED }; };
-                };
+                } fill;
             };
             
             struct line_width : base<scoped::line_width> {
                 inline scoped_type operator()(float width) const
                 { return { width }; };
+                inline void operator()(float width,
+                                       std::function<void()> body) const
+                { scoped_type(width).run(body); };
             };
             
             namespace detail {
@@ -454,22 +498,55 @@ namespace ofx {
                     using scoped_type = typename base<type>::scoped_type;
                     inline scoped_type operator()(int resolution) const
                     { return { resolution }; };
+                    
+                    inline void operator()(int resolution,
+                                           std::function<void()> body) const
+                    { scoped_type(resolution).run(body); };
                 };
                 template <typename type>
                 struct vec2f_resolution : base<type> {
                     using scoped_type = typename base<type>::scoped_type;
                     inline scoped_type operator()(int resolution) const
                     { return { ofVec2f(resolution, resolution) }; };
+                    inline scoped_type operator()(int resolution_x, int resolution_y) const
+                    { return { ofVec2f(resolution_x, resolution_y) }; };
                     inline scoped_type operator()(ofVec2f resolution) const
                     { return { resolution }; };
+                    
+                    inline void operator()(int resolution,
+                                           std::function<void()> body) const
+                    { scoped_type(ofVec2f(resolution, resolution)).run(body); };
+                    inline void operator()(int resolution_x,
+                                           int resolution_y,
+                                           std::function<void()> body) const
+                    { scoped_type(ofVec2f(resolution_x, resolution_y)).run(body); };
+                    inline void operator()(ofVec2f resolution,
+                                           std::function<void()> body) const
+                    { scoped_type(resolution).run(body); };
                 };
                 template <typename type>
                 struct vec3f_resolution : base<type> {
                     using scoped_type = typename base<type>::scoped_type;
                     inline scoped_type operator()(int resolution) const
                     { return { ofVec3f(resolution, resolution, resolution) }; };
+                    inline scoped_type operator()(int resolution_x,
+                                                  int resolution_y,
+                                                  int resolution_z) const
+                    { return { ofVec3f(resolution_x, resolution_y, resolution_z) }; };
                     inline scoped_type operator()(ofVec3f resolution) const
                     { return { resolution }; };
+                    
+                    inline void operator()(int resolution,
+                                           std::function<void()> body) const
+                    { scoped_type(ofVec3f(resolution, resolution, resolution)).run(body); };
+                    inline void operator()(int resolution_x,
+                                           int resolution_y,
+                                           int resolution_z,
+                                           std::function<void()> body) const
+                    { scoped_type(ofVec3f(resolution_x, resolution_y, resolution_z)).run(body); };
+                    inline void operator()(ofVec3f resolution,
+                                           std::function<void()> body) const
+                    { scoped_type(resolution).run(body); };
                 };
             };
             using circle_resolution = tag::detail::int_resolution<scoped::circle_resolution>;
@@ -488,12 +565,21 @@ namespace ofx {
                 using scoped_type = typename base<scoped::begin<type>>::scoped_type;
                 inline scoped_type operator()(type &v) const
                 { return { v }; };
+                
+                inline void operator()(type &v,
+                                       std::function<void()> body) const
+                { scoped_type(v).run(body); };
             };
             
             struct beginable {
                 template <typename type>
                 inline begin<type> operator()(type &v) const
                 { return { v }; };
+                
+                template <typename type>
+                inline void operator()(type &v,
+                                       std::function<void()> body) const
+                { scoped_type(v).run(body); };
             };
             
             template <typename type>
@@ -501,18 +587,32 @@ namespace ofx {
                 using scoped_type = typename base<scoped::bind<type>>::scoped_type;
                 scoped_type operator()(type &v) const
                 { return { v }; };
+                
+                inline void operator()(type &v,
+                                       std::function<void()> body) const
+                { scoped_type(v).run(body); };
             };
             
             struct bindable {
                 template <typename type>
                 inline bind<type> operator()(type &v) const
                 { return { v }; };
+                
+                template <typename type>
+                inline void operator()(type &v,
+                                       std::function<void()> body) const
+                { scoped_type(v).run(body); };
             };
             
             struct custom : base<scoped::custom> {
                 scoped_type operator()(const std::function<void()> &cns,
                                        const std::function<void()> &dst) const
                 { return {cns, dst}; };
+                
+                inline void operator()(const std::function<void()> &cns,
+                                       const std::function<void()> &dst,
+                                       std::function<void()> body) const
+                { scoped_type(cns, dst).run(body); };
             };
         };
         
@@ -522,8 +622,8 @@ namespace ofx {
             constexpr tag::view view;
             
             constexpr tag::shape shape;
-            constexpr tag::shape::open openShape;
-            constexpr tag::shape::closed closedShape;
+            constexpr tag::shape::open_t openShape;
+            constexpr tag::shape::closed_t closedShape;
 
             constexpr tag::save_screen_as_pdf saveScreenAsPDF;
             constexpr tag::save_screen_as_svg saveScreenAsSVG;
@@ -553,8 +653,8 @@ namespace ofx {
             constexpr tag::lighting::disabler disableLighting;
             
             constexpr tag::rect_mode rectMode;
-            constexpr tag::rect_mode::corner rectModeCorner;
-            constexpr tag::rect_mode::center rectModeCenter;
+            constexpr tag::rect_mode::corner_t rectModeCorner;
+            constexpr tag::rect_mode::center_t rectModeCenter;
             
             constexpr tag::blend_mode blendMode;
             constexpr tag::blend_mode::alpha_blending alphaBlending;
@@ -562,8 +662,8 @@ namespace ofx {
             constexpr tag::blend_mode::alpha_blending::disabler disableAlphaBlending;
             
             constexpr tag::fill_mode fillMode;
-            constexpr tag::fill_mode::no_fill noFill;
-            constexpr tag::fill_mode::fill fill;
+            constexpr tag::fill_mode::no_fill_t noFill;
+            constexpr tag::fill_mode::fill_t fill;
 #if 10 <= OF_VERSION_MINOR
             // matrix_mode
             // poly_mode
