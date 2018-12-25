@@ -126,7 +126,7 @@ public:
 
 ## Update History
 
-### 2018/12/2x ver 0.1.0 release
+### 2018/12/25 ver 0.1.0 release
 
 * remake
 
