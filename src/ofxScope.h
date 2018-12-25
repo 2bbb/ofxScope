@@ -13,6 +13,14 @@
 #include "ofGraphics.h"
 #include "ofLight.h"
 
+#ifdef TARGET_OPENGLES
+#   ifndef TARGET_PROGRAMMABLE_GL
+#           define OFXSCOPE_POINT_SPRITSE_PARAM GL_POINT_SPRITE_OES
+#   endif
+#else
+#           define OFXSCOPE_POINT_SPRITSE_PARAM GL_PROGRAM_POINT_SIZE
+#endif
+
 namespace ofx {
     namespace scope {
         namespace accessor {
@@ -81,6 +89,12 @@ namespace ofx {
                     else ofFill();
                 };
             };
+            
+#if 10 <= OF_VERSION_MINOR
+            struct matrix_mode {};
+            struct poly_mode {};
+#endif
+
             struct line_width {
                 using value_type = float;
                 inline value_type get() const
@@ -227,7 +241,7 @@ namespace ofx {
                 { if(!is_moved) a.set(saved); };
                 
             private:
-                accessor a;
+                const accessor a;
                 value_type saved;
             };
             
@@ -236,13 +250,7 @@ namespace ofx {
             
             using depth_test = gl_bool_parameter<GL_DEPTH_TEST>;
             using anti_aliasing = gl_bool_parameter<GL_MULTISAMPLE>;
-#ifdef TARGET_OPENGLES
-#   ifndef TARGET_PROGRAMMABLE_GL
-            using point_sprites = gl_bool_parameter<GL_POINT_SPRITE_OES>;
-#   endif
-#else
-            using point_sprites = gl_bool_parameter<GL_PROGRAM_POINT_SIZE>;
-#endif
+            using point_sprites = gl_bool_parameter<OFXSCOPE_POINT_SPRITSE_PARAM>;
             using arb_tex = accessor_pattern<accessor::arb_tex>;
             using smoothing = accessor_pattern<accessor::smoothing>;
             using lighting = accessor_pattern<accessor::lighting>;
@@ -251,8 +259,8 @@ namespace ofx {
             using fill_mode = accessor_pattern<accessor::fill_mode>;
             
 #if 10 <= OF_VERSION_MINOR
-            // matrix_mode
-            // poly_mode
+            using matrix_mode = accessor_pattern<accessor::matrix_mode>;
+            using poly_mode = accessor_pattern<accessor::polys_mode>;
 #endif
             
             using line_width = accessor_pattern<accessor::line_width>;
