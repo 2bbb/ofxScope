@@ -1,5 +1,7 @@
 # ofxScope
 
+## Example
+
 ```cpp
 class ofApp : public ofBaseApp {
 	ofFbo fbo;
@@ -12,26 +14,25 @@ public:
 			auto _ = ofxCreateScope(ofxScope::matrix, ofxScope::style);
             // ofPushMatrix();
             // ofPushStyle();
-			ofTranslate(ofGetWidth() * 0.5f, ofGetHeight() * 0.5f);
-			ofScale(2);
-			ofSetColor(ofColor::white);
-            drawCircles();
+            ...
             // ofPopStyle();
             // ofPopMatrix();
 		}
 		
         ofxCreateScope(ofxScope::matrix, ofxScope::style).run([] {
-			ofTranslate(ofGetWidth() * 0.5f, ofGetHeight() * 0.5f);
-			ofScale(2);
-			ofSetColor(ofColor::white);
-            drawCircles();
+            ...
         });
-        
+        {
+            auto _ = ofxScope::cam(cam);
+            // cam.begin();
+            ...
+            // cam.end();
+        }
 		{
 			auto _ = ofxCreateScope(fbo, cam);
             // fbo.begin();
             // cam.begin();
-			drawLines();
+            ...
             // cam.end();
             // fbo.end();
 		}
@@ -48,6 +49,82 @@ public:
 ```
 
 
+
+## Type
+
+* `matrix`
+* `style`
+* `view`
+
+* `shape`
+  * bool: close
+* `saveScreenAsPDF`
+  * string: path
+    * `ofxScope::saveScreenAsPDF('./capture/foo.pdf')`
+* `saveScreenAsSVG`
+  * string: path
+* `depthTest`
+  * bool: enable
+* `antiAliasing `
+  * bool: enable
+* `pointSprites`
+  * bool: enable
+* `usingArbTex`
+  * bool: enable
+* `smoothing`
+  * bool: enable
+* `lighting`
+  * bool: enable
+* `rectMode`
+  * ofRectMode: mode
+* `blendMode`
+  * ofBlendMode: mode
+* `fillMode`
+  * ofFillFlag: mode
+* `lineWidth` 
+  * float: width
+* `circleResolution`
+  * int
+* `curveResolution`
+  * int
+* `sphereResolution`
+  * int
+* `icoSphereResolution`
+  * int
+* `boxResolution`
+  * ofVec3f
+  * int
+  * int, int, int
+* `coneResolution`
+  * ofVec3f
+  * int
+  * int, int, int
+* `cylinderResolution`
+  * ofVec3f
+  * int
+  * int, int, int
+* `planeResolution`
+  * ofVec2f
+  * int
+  * int, int
+* `begin` 
+  * object has `begin()`/`end()`
+* `fbo`
+  * ofFbo
+* `camera`
+  * ofCamera
+* `shader`
+  * ofShader
+* `material`
+  * ofMaterial
+* `bind`
+  * object has `bind()`/`unbind()`
+* `bindTex`
+  * ofTexture
+* `custom`
+  * `function<void()>`, `function<void()>`
+
+## Update History
 
 ### 2018/12/2x ver 0.1.0 release
 
