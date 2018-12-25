@@ -11,7 +11,9 @@
 
 #include "ofAppRunner.h"
 #include "ofGraphics.h"
+#include "of3dGraphics.h"
 #include "ofLight.h"
+#include "ofTexture.h"
 
 #ifdef TARGET_OPENGLES
 #   ifndef TARGET_PROGRAMMABLE_GL
@@ -259,8 +261,8 @@ namespace ofx {
             using fill_mode = accessor_pattern<accessor::fill_mode>;
             
 #if 10 <= OF_VERSION_MINOR
-            using matrix_mode = accessor_pattern<accessor::matrix_mode>;
-            using poly_mode = accessor_pattern<accessor::polys_mode>;
+//            using matrix_mode = accessor_pattern<accessor::matrix_mode>;
+//            using poly_mode = accessor_pattern<accessor::polys_mode>;
 #endif
             
             using line_width = accessor_pattern<accessor::line_width>;
