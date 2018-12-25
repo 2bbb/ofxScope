@@ -145,6 +145,7 @@ namespace ofx {
                 { ofSetPlaneResolution(res.x, res.y); };
             };
         } // end of namespace accessor
+        
         namespace scoped {
             struct base {
                 base() {};
@@ -233,7 +234,7 @@ namespace ofx {
             template <GLenum param>
             using gl_bool_parameter = accessor_pattern<accessor::gl_bool<param>>;
             
-            using depth_test = gl_bool_parameter<GL_MULTISAMPLE>;
+            using depth_test = gl_bool_parameter<GL_DEPTH_TEST>;
             using anti_aliasing = gl_bool_parameter<GL_MULTISAMPLE>;
 #ifdef TARGET_OPENGLES
 #   ifndef TARGET_PROGRAMMABLE_GL
