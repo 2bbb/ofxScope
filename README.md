@@ -4,21 +4,21 @@
 
 ```cpp
 class ofApp : public ofBaseApp {
-	ofFbo fbo;
-	ofEasyCam cam;
+    ofFbo fbo;
+    ofEasyCam cam;
 ...
 
 public:
-	void draw() {
-		{
+    void draw() {
+        {
             auto _ = ofxCreateScope(ofxScope::matrix, ofxScope::style);
             // ofPushMatrix();
             // ofPushStyle();
             ...
             // ofPopStyle();
             // ofPopMatrix();
-		}
-		
+        }
+        
         ofxCreateScope(ofxScope::matrix, ofxScope::style).run([] {
 	        ...
         });
