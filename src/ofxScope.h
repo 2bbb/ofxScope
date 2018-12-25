@@ -693,6 +693,43 @@ namespace ofx {
             constexpr tag::custom custom;
         };
         
+        namespace detail {
+            template <typename... Ts> using void_t = void;
+            
+            template <typename type, typename = void>
+            struct has_create_scope
+            : std::false_type {};
+            
+            template <typename type>
+            struct has_create_scope<type, void_t<decltype(type::create_scope())>>
+            : std::true_type {};
+            
+            template <typename type, typename = void>
+            struct has_begin_end
+            : std::false_type {};
+            
+            template <typename type>
+            struct has_begin_end<
+                type,
+                void_t<
+                    decltype(std::declval<type>().begin()),
+                    decltype(std::declval<type>().end())
+                >
+            > : std::true_type {};
+            
+            template <typename type, typename = void>
+            struct has_bind_unbind
+            : std::false_type {};
+
+            template <typename type>
+            struct has_bind_unbind<
+                type,
+                void_t<
+                    decltype(std::declval<type>().bind()),
+                    decltype(std::declval<type>().unbind())
+                >
+            > : std::true_type {};
+        };
         namespace {
             template <typename type>
             inline auto create_scope(type &&rhs)
@@ -702,7 +739,7 @@ namespace ofx {
             template <typename tag_type>
             inline auto create_scope(const tag_type &tag)
                 -> typename std::enable_if<
-                    tag_type::is_tag,
+                    tag_type::is_tag && !scope::detail::has_create_scope<tag_type>::value,
                     typename tag_type::scoped_type
                 >::type
             { return {}; };
@@ -731,7 +768,7 @@ namespace ofx {
             template <typename type>
             inline auto create_scope(type &v)
             -> typename std::enable_if<
-                decltype(v.begin(), v.end(), std::true_type())::value,
+                scope::detail::has_begin_end<type>::value,
                 scoped::begin<type>
             >::type
             { return {v}; };
