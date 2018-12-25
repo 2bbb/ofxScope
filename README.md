@@ -7,7 +7,11 @@ class ofApp : public ofBaseApp {
     ofFbo fbo;
     ofEasyCam cam;
 ...
-
+	void setup() {
+        ofxScope::disableArbTex([this] {
+            fbo.allocate(ofGetWidth(), ofGetHeight());
+        });
+    }
 public:
     void draw() {
         {
