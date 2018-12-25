@@ -11,7 +11,7 @@ class ofApp : public ofBaseApp {
 public:
 	void draw() {
 		{
-			auto _ = ofxCreateScope(ofxScope::matrix, ofxScope::style);
+            auto _ = ofxCreateScope(ofxScope::matrix, ofxScope::style);
             // ofPushMatrix();
             // ofPushStyle();
             ...
@@ -20,31 +20,32 @@ public:
 		}
 		
         ofxCreateScope(ofxScope::matrix, ofxScope::style).run([] {
-            ...
+	        ...
         });
         {
-            auto _ = ofxScope::cam(cam);
-            // cam.begin();
-            ...
-            // cam.end();
+	        auto _ = ofxScope::cam(cam);
+    	    // cam.begin();
+        	...
+	        // cam.end();
         }
-		{
-			auto _ = ofxCreateScope(fbo, cam);
+        
+        {
+            auto _ = ofxCreateScope(fbo, cam);
             // fbo.begin();
             // cam.begin();
             ...
             // cam.end();
             // fbo.end();
-		}
+        }
         
-		{
-			auto _ = ofxCreateScope(ofxScope::custom([] { ofLogNotice() << "start"; },
+        {
+            auto _ = ofxCreateScope(ofxScope::custom([] { ofLogNotice() << "start"; },
                                                      [] { ofLogNotice() << "end"; }));
             // print "start"
             ...
             // print "end"
-		}
-	}
+        }
+    }
 };
 ```
 
