@@ -628,8 +628,9 @@ namespace ofx {
             {};
             
             template <typename scope_type>
-            holder<types ..., scope_type> add(scope_type &&scope) &&
-            { return { std::tuple_cat(std::move(scopes), std::make_tuple(scope)) }; };
+            auto add(scope_type &&scope) &&
+            -> holder<types ..., decltype(create_scope(std::forward<scope_type>(scope)))>
+            { return { std::tuple_cat(std::move(scopes), std::make_tuple(create_scope(std::forward<scope_type>(scope)))) }; };
             holder<types ..., scoped::custom> add(std::function<void()> cns,
                                                   std::function<void()> dst) &&
             { return { std::tuple_cat(std::move(scopes), std::make_tuple(custom(cns, dst))) }; };
