@@ -204,40 +204,94 @@ namespace ofx {
                 float saved;
             };
             
-            struct circle_resolution : base {
-                circle_resolution()
-                : saved(ofGetStyle().circleResolution) {};
-                circle_resolution(int resolution)
-                : circle_resolution() { ofSetCircleResolution(resolution); }
-                circle_resolution(circle_resolution &&rhs)
+            template <typename accessor>
+            struct resolution : base {
+                using value_type = typename accessor::value_type;
+                resolution()
+                : a()
+                , saved(a.get()) {};
+                resolution(value_type new_resolution)
+                : resolution() { a.set(new_resolution); };
+                resolution(resolution &&rhs)
                 : base(std::move(rhs))
                 , saved(rhs.saved) {};
-                ~circle_resolution()
-                { if(!is_moved) ofSetCircleResolution(saved); };
+                ~resolution()
+                { if(!is_moved) a.set(saved); };
+                
             private:
-                int saved;
+                accessor a;
+                value_type saved;
             };
             
-            struct curve_resolution : base {
-                curve_resolution()
-                : saved(ofGetStyle().curveResolution) {};
-                curve_resolution(int resolution)
-                : curve_resolution() { ofSetCurveResolution(resolution); }
-                curve_resolution(curve_resolution &&rhs)
-                : base(std::move(rhs))
-                , saved(rhs.saved) {};
-                ~curve_resolution()
-                { if(!is_moved) ofSetCurveResolution(saved); };
-            private:
-                int saved;
-            };
-
-            // sphere
-            // ico_sphere
-            // box
-            // cone
-            // plane
-            // cylinder
+            namespace detail {
+                namespace {
+                    struct circle_resolution_accessor {
+                        using value_type = int;
+                        inline value_type get() const
+                        { return ofGetStyle().circleResolution; };
+                        inline void set(value_type res) const
+                        { ofSetCircleResolution(res); };
+                    };
+                    struct curve_resolution_accessor {
+                        using value_type = int;
+                        inline value_type get() const
+                        { return ofGetStyle().curveResolution; };
+                        inline void set(value_type res)
+                        { ofSetCurveResolution(res); };
+                    };
+                    struct sphere_resolution_accessor {
+                        using value_type = int;
+                        inline value_type get() const
+                        { return ofGetSphereResolution(); };
+                        inline void set(value_type res)
+                        { ofSetSphereResolution(res); };
+                    };
+                    struct ico_sphere_resolution_accessor {
+                        using value_type = int;
+                        inline value_type get() const
+                        { return ofGetIcoSphereResolution(); };
+                        inline void set(value_type res)
+                        { ofSetIcoSphereResolution(res); };
+                    };
+                    struct box_resolution_accessor {
+                        using value_type = ofVec3f;
+                        inline value_type get() const
+                        { return ofGetBoxResolution(); };
+                        inline void set(value_type res)
+                        { ofSetBoxResolution(res.x, res.y, res.z); };
+                    };
+                    struct cone_resolution_accessor {
+                        using value_type = ofVec3f;
+                        inline value_type get() const
+                        { return ofGetConeResolution(); };
+                        inline void set(value_type res)
+                        { ofSetConeResolution(res.x, res.y, res.z); };
+                    };
+                    struct cylinder_resolution_accessor {
+                        using value_type = ofVec3f;
+                        inline value_type get() const
+                        { return ofGetCylinderResolution(); };
+                        inline void set(value_type res)
+                        { ofSetCylinderResolution(res.x, res.y, res.z); };
+                    };
+                    struct plane_resolution_accessor {
+                        using value_type = ofVec2f;
+                        inline value_type get() const
+                        { return ofGetPlaneResolution(); };
+                        inline void set(value_type res)
+                        { ofSetPlaneResolution(res.x, res.y); };
+                    };
+                }
+            }
+            
+            using circle_resolution = resolution<scoped::detail::circle_resolution_accessor>;
+            using curve_resolution = resolution<scoped::detail::curve_resolution_accessor>;
+            using sphere_resolution = resolution<scoped::detail::sphere_resolution_accessor>;
+            using ico_sphere_resolution = resolution<scoped::detail::ico_sphere_resolution_accessor>;
+            using box_resolution = resolution<scoped::detail::box_resolution_accessor>;
+            using cone_resolution = resolution<scoped::detail::cone_resolution_accessor>;
+            using cylinder_resolution = resolution<scoped::detail::cylinder_resolution_accessor>;
+            using plane_resolution = resolution<scoped::detail::plane_resolution_accessor>;
 
             template <typename type>
             struct begin_end : base {
@@ -250,6 +304,24 @@ namespace ofx {
                 { if(!is_moved) v.end(); };
             private:
                 type &v;
+            };
+            
+            struct custom : base {
+                custom(const std::function<void()> &cns,
+                       const std::function<void()> &dst)
+                : cns(cns)
+                , dst(dst)
+                { cns(); };
+                custom(custom &&rhs)
+                : base(std::move(rhs))
+                , cns(std::move(rhs.cns))
+                , dst(std::move(rhs.dst))
+                {};
+                ~custom()
+                { if(!is_moved) dst(); };
+            private:
+                std::function<void()> cns{[]{}};
+                std::function<void()> dst{[]{}};
             };
         }; // end of namespace scoped
         
@@ -282,17 +354,17 @@ namespace ofx {
             
             struct save_screen_as_pdf : base {
                 using scoped_type = scoped::save_screen_as_pdf;
-                inline scoped::save_screen_as_pdf operator()() const
+                inline scoped_type operator()() const
                 { return {}; };
-                inline scoped::save_screen_as_pdf operator()(const std::string &path) const
+                inline scoped_type operator()(const std::string &path) const
                 { return { path }; };
             };
             
             struct save_screen_as_svg : base {
                 using scoped_type = scoped::save_screen_as_svg;
-                inline scoped::save_screen_as_svg operator()() const
+                inline scoped_type operator()() const
                 { return {}; };
-                inline scoped::save_screen_as_svg operator()(const std::string &path) const
+                inline scoped_type operator()(const std::string &path) const
                 { return { path }; };
             };
             
@@ -319,46 +391,44 @@ namespace ofx {
             using anti_aliasing = bool_parameter<scoped::anti_aliasing>;
             using point_sprites = bool_parameter<scoped::point_sprites>;
             using smoothing     = bool_parameter<scoped::smoothing>;
-
-            // smoothing
             
             struct rect_mode : base {
                 using scoped_type = scoped::rect_mode;
-                inline scoped::rect_mode operator()() const
+                inline scoped_type operator()() const
                 { return {}; };
-                inline scoped::rect_mode operator()(ofRectMode mode) const
+                inline scoped_type operator()(ofRectMode mode) const
                 { return { mode }; };
                 
                 struct corner : base {
-                    static scoped::rect_mode create_scope()
+                    static scoped_type create_scope()
                     { return { OF_RECTMODE_CORNER }; };
                 };
                 struct center : base {
-                    static scoped::rect_mode create_scope()
+                    static scoped_type create_scope()
                     { return { OF_RECTMODE_CENTER }; };
                 };
             };
             
             struct blend_mode : base {
-                using scoped_type = scoped::rect_mode;
-                inline scoped::blend_mode operator()() const
+                using scoped_type = scoped::blend_mode;
+                inline scoped_type operator()() const
                 { return {}; };
-                inline scoped::blend_mode operator()(ofBlendMode mode) const
+                inline scoped_type operator()(ofBlendMode mode) const
                 { return { mode }; };
                 
                 struct alpha_blending : base {
                     using scoped_type = scoped::blend_mode;
-                    inline scoped::blend_mode operator()() const
+                    inline scoped_type operator()() const
                     { return {}; };
-                    inline scoped::blend_mode operator()(bool enable) const
+                    inline scoped_type operator()(bool enable) const
                     { return { enable ? OF_BLENDMODE_ALPHA : OF_BLENDMODE_DISABLED }; };
                     
                     struct enabler : base {
-                        static scoped::blend_mode create_scope()
+                        static scoped_type create_scope()
                         { return { OF_BLENDMODE_ALPHA }; };
                     };
                     struct disabler : base {
-                        static scoped::blend_mode create_scope()
+                        static scoped_type create_scope()
                         { return { OF_BLENDMODE_DISABLED }; };
                     };
                 };
@@ -366,48 +436,76 @@ namespace ofx {
             
             struct fill_mode : base {
                 using scoped_type = scoped::fill_mode;
-                inline scoped::fill_mode operator()() const
+                inline scoped_type operator()() const
                 { return {}; };
-                inline scoped::fill_mode operator()(ofFillFlag flag) const
+                inline scoped_type operator()(ofFillFlag flag) const
                 { return { flag }; };
                 
                 struct no_fill : base {
-                    static scoped::fill_mode create_scope()
+                    static scoped_type create_scope()
                     { return { OF_OUTLINE }; };
                 };
                 struct fill : base {
-                    static scoped::fill_mode create_scope()
+                    static scoped_type create_scope()
                     { return { OF_FILLED }; };
                 };
             };
             
             struct line_width : base {
-                inline scoped::line_width operator()() const
+                using scoped_type = scoped::line_width;
+                inline scoped_type operator()() const
                 { return {}; };
-                inline scoped::line_width operator()(float width) const
+                inline scoped_type operator()(float width) const
                 { return { width }; };
             };
             
-            struct circle_resolution : base {
-                inline scoped::circle_resolution operator()() const
-                { return {}; };
-                inline scoped::circle_resolution operator()(int resolution) const
-                { return { resolution }; };
+            namespace detail {
+                template <typename type>
+                struct int_resolution : base {
+                    using scoped_type = type;
+                    inline scoped_type operator()() const
+                    { return {}; };
+                    inline scoped_type operator()(int resolution) const
+                    { return { resolution }; };
+                };
+                template <typename type>
+                struct vec2f_resolution : base {
+                    using scoped_type = type;
+                    inline scoped_type operator()() const
+                    { return {}; };
+                    inline scoped_type operator()(int resolution) const
+                    { return { ofVec2f(resolution, resolution) }; };
+                    inline scoped_type operator()(ofVec2f resolution) const
+                    { return { resolution }; };
+                };
+                template <typename type>
+                struct vec3f_resolution : base {
+                    using scoped_type = type;
+                    inline scoped_type operator()() const
+                    { return {}; };
+                    inline scoped_type operator()(int resolution) const
+                    { return { ofVec3f(resolution, resolution, resolution) }; };
+                    inline scoped_type operator()(ofVec3f resolution) const
+                    { return { resolution }; };
+                };
             };
+            using circle_resolution = tag::detail::int_resolution<scoped::circle_resolution>;
+            using curve_resolution = tag::detail::int_resolution<scoped::curve_resolution>;
+            using sphere_resolution = tag::detail::int_resolution<scoped::sphere_resolution>;
+            using ico_sphere_resolution = tag::detail::int_resolution<scoped::ico_sphere_resolution>;
             
-            struct curve_resolution : base {
-                inline scoped::curve_resolution operator()() const
-                { return {}; };
-                inline scoped::curve_resolution operator()(int resolution) const
-                { return { resolution }; };
+            using box_resolution = tag::detail::vec3f_resolution<scoped::box_resolution>;
+            using cone_resolution = tag::detail::vec3f_resolution<scoped::cone_resolution>;
+            using cylinder_resolution = tag::detail::vec3f_resolution<scoped::cylinder_resolution>;
+            
+            using plane_resolution = tag::detail::vec2f_resolution<scoped::plane_resolution>;
+            
+            struct custom : base {
+                using scoped_type = scoped::custom;
+                scoped_type operator()(const std::function<void()> &cns,
+                                       const std::function<void()> &dst) const
+                { return {cns, dst}; };
             };
-            
-            // sphere
-            // ico_sphere
-            // box
-            // cone
-            // plane
-            // cylinder
         };
         
         namespace {
@@ -461,12 +559,16 @@ namespace ofx {
             constexpr tag::line_width lineWidth;
             constexpr tag::circle_resolution circleResolution;
             constexpr tag::curve_resolution curveResolution;
-            // sphere
-            // ico_sphere
-            // box
-            // cone
-            // plane
-            // cylinder
+            constexpr tag::sphere_resolution sphereResolution;
+            constexpr tag::ico_sphere_resolution icoSphereResolution;
+            
+            constexpr tag::box_resolution boxResolution;
+            constexpr tag::cone_resolution coneResolution;
+            constexpr tag::cylinder_resolution cylinderResolution;
+            
+            constexpr tag::plane_resolution planeResolution;
+            
+            constexpr tag::custom custom;
         };
         
         namespace {
@@ -491,10 +593,6 @@ namespace ofx {
                 >::type
             { return tag_type::create_scope(); };
 
-            // anti_aliasing
-            // point_sprites
-            // smoothing
-
             // rect_mode
             inline scoped::rect_mode create_scope(ofRectMode mode)
             { return { mode }; };
@@ -507,13 +605,6 @@ namespace ofx {
             inline scoped::fill_mode create_scope(ofFillFlag flag)
             { return { flag }; };
             
-            // sphere
-            // ico_sphere
-            // box
-            // cone
-            // plane
-            // cylinder
-
             // begin / end
             template <typename type>
             inline auto create_scope(type &v)
@@ -523,6 +614,29 @@ namespace ofx {
             >::type
             { return {v}; };
         };
+        
+        template <typename ... types>
+        struct holder {
+            holder(std::tuple<types ...> &&arg)
+            : scopes(std::move(arg))
+            {};
+            holder(types && ... args)
+            : scopes(std::move(args) ...)
+            {};
+            holder(holder &&rhs)
+            : scopes(std::move(rhs.scopes))
+            {};
+            
+            template <typename scope_type>
+            holder<types ..., scope_type> add(scope_type &&scope) &&
+            { return { std::tuple_cat(std::move(scopes), std::make_tuple(scope)) }; };
+            holder<types ..., scoped::custom> add(std::function<void()> cns,
+                                                  std::function<void()> dst) &&
+            { return { std::tuple_cat(std::move(scopes), std::make_tuple(custom(cns, dst))) }; };
+            
+        private:
+            std::tuple<types ...> scopes;
+        };
     };
 };
 
@@ -530,6 +644,6 @@ namespace ofxScope = ofx::scope;
 
 template <typename ... types>
 auto ofxCreateScope(types && ...vs)
-    -> std::tuple<decltype(ofx::scope::create_scope(std::forward<types>(vs))) ...>
-{ return std::make_tuple(ofx::scope::create_scope(std::forward<types>(vs)) ...); };
+    -> ofx::scope::holder<decltype(ofx::scope::create_scope(std::forward<types>(vs))) ...>
+{ return { std::make_tuple(ofx::scope::create_scope(std::forward<types>(vs)) ...) }; };
 
