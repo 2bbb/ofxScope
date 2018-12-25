@@ -23,6 +23,11 @@ namespace ofx {
                 base &operator=(const base &) = delete;
                 base &operator=(base &&) = delete;
                 static constexpr bool is_scoped_struct{true};
+                
+                inline void operator()(std::function<void()> body) const
+                { body(); };
+                inline void run(std::function<void()> body) const
+                { body(); };
             protected:
                 bool is_moved{false};
             };
@@ -326,12 +331,20 @@ namespace ofx {
         }; // end of namespace scoped
         
         namespace tag {
-            struct base { static constexpr bool is_tag{true}; };
+            struct base {
+                static constexpr bool is_tag{true};
+            };
             template <typename type>
             struct no_arg : base {
                 using scoped_type = type;
                 scoped_type operator()() const
                 { return {}; };
+                inline void run(std::function<void()> body) const {
+                    scoped_type _;
+                    body();
+                };
+                inline void operator()(std::function<void()> body) const
+                { run(body); };
             };
             using matrix = no_arg<scoped::matrix>;
             using style = no_arg<scoped::style>;
@@ -500,6 +513,14 @@ namespace ofx {
             
             using plane_resolution = tag::detail::vec2f_resolution<scoped::plane_resolution>;
             
+            struct begin_end : base {
+                template <typename type>
+                using scoped_type = scoped::begin_end<type>;
+                template <typename type>
+                scoped_type<type> operator()(type &v) const
+                { return { v }; };
+            };
+            
             struct custom : base {
                 using scoped_type = scoped::custom;
                 scoped_type operator()(const std::function<void()> &cns,
@@ -568,6 +589,8 @@ namespace ofx {
             
             constexpr tag::plane_resolution planeResolution;
             
+            constexpr tag::begin_end fbo;
+            constexpr tag::begin_end camera;
             constexpr tag::custom custom;
         };
         
@@ -616,7 +639,7 @@ namespace ofx {
         };
         
         template <typename ... types>
-        struct holder {
+        struct holder : scoped::base {
             holder(std::tuple<types ...> &&arg)
             : scopes(std::move(arg))
             {};
@@ -634,7 +657,6 @@ namespace ofx {
             holder<types ..., scoped::custom> add(std::function<void()> cns,
                                                   std::function<void()> dst) &&
             { return { std::tuple_cat(std::move(scopes), std::make_tuple(custom(cns, dst))) }; };
-            
         private:
             std::tuple<types ...> scopes;
         };

@@ -1,36 +1,57 @@
 # ofxScope
 
-```
+```cpp
 class ofApp : public ofBaseApp {
 	ofFbo fbo;
-
+	ofEasyCam cam;
 ...
 
 public:
 	void draw() {
 		{
-			ofxScopedMatrix _;
-			ofxScopedStyle __;
+			auto _ = ofxCreateScope(ofxScope::matrix, ofxScope::style);
+            // ofPushMatrix();
+            // ofPushStyle();
 			ofTranslate(ofGetWidth() * 0.5f, ofGetHeight() * 0.5f);
 			ofScale(2);
-			ofSetColor(ofColor::white);						drawCircles();
-		}
-		
-		{
-			ofxScope::combine<ofxScope::matrix, ofxScope::style> _;
-			ofTranslate(ofGetWidth() * 0.5f, ofGetHeight() * 0.5f);
-			ofScale(3);
 			ofSetColor(ofColor::white);
-			drawCircles();
+            drawCircles();
+            // ofPopStyle();
+            // ofPopMatrix();
 		}
 		
+        ofxCreateScope(ofxScope::matrix, ofxScope::style).run([] {
+			ofTranslate(ofGetWidth() * 0.5f, ofGetHeight() * 0.5f);
+			ofScale(2);
+			ofSetColor(ofColor::white);
+            drawCircles();
+        });
+        
 		{
-			ofxScopedFbo _(fbo);
+			auto _ = ofxCreateScope(fbo, cam);
+            // fbo.begin();
+            // cam.begin();
 			drawLines();
+            // cam.end();
+            // fbo.end();
+		}
+        
+		{
+			auto _ = ofxCreateScope(ofxScope::custom([] { ofLogNotice() << "start"; },
+                                                     [] { ofLogNotice() << "end"; }));
+            // print "start"
+            ...
+            // print "end"
 		}
 	}
 };
 ```
+
+
+
+### 2018/12/2x ver 0.1.0 release
+
+* remake
 
 ### 2016/05/03 ver 0.0.1 release
 
