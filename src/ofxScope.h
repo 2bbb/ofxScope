@@ -844,14 +844,13 @@ using ofxScopedCylinderResolution = ofxScope::scoped::cylinder_resolution;
 
 using ofxScopedPlaneResolution = ofxScope::scoped::plane_resolution;
 
-using ofxScopedBegin = ofxScope::scoped::begin;
-using ofxScopedFbo = ofxScope::scoped::begin;
-using ofxScopedCamera = ofxScope::scoped::begin;
-using ofxScopedShader = ofxScope::scoped::begin;
-using ofxScopedMaterial = ofxScope::scoped::begin;
+using ofxScopedFbo = ofxScope::scoped::begin<ofFbo>;
+using ofxScopedCamera = ofxScope::scoped::begin<ofCamera>;
+using ofxScopedShader = ofxScope::scoped::begin<ofShader>;
+using ofxScopedMaterial = ofxScope::scoped::begin<ofMaterial>;
 
-using ofxScopedBind = ofxScope::scoped::bind;
-using ofxScopedBindTexture = ofxScope::scoped::bind;
+
+using ofxScopedBindTexture = ofxScope::scoped::bind<ofTexture>;
 
 using ofxScoped = ofxScope::scoped::custom;
 
