@@ -252,11 +252,11 @@ namespace ofx {
             };
             
             template <GLenum param>
-            using gl_bool_parameter = accessor_pattern<accessor::gl_bool<param>>;
+            using gl_bool_parameter_templated = accessor_pattern<accessor::gl_bool<param>>;
             
-            using depth_test = gl_bool_parameter<GL_DEPTH_TEST>;
-            using anti_aliasing = gl_bool_parameter<GL_MULTISAMPLE>;
-            using point_sprites = gl_bool_parameter<OFXSCOPE_POINT_SPRITSE_PARAM>;
+            using depth_test = gl_bool_parameter_templated<GL_DEPTH_TEST>;
+            using anti_aliasing = gl_bool_parameter_templated<GL_MULTISAMPLE>;
+            using point_sprites = gl_bool_parameter_templated<OFXSCOPE_POINT_SPRITSE_PARAM>;
             using arb_tex = accessor_pattern<accessor::arb_tex>;
             using smoothing = accessor_pattern<accessor::smoothing>;
             using lighting = accessor_pattern<accessor::lighting>;
