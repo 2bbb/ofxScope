@@ -308,6 +308,18 @@ namespace ofx {
                 type &v;
             };
             
+            struct gl_begin : base {
+                gl_begin(GLenum param)
+                : param(param) { glBegin(param); };
+                gl_begin(gl_begin &&rhs)
+                : base(std::move(rhs))
+                , param(param) {};
+                ~gl_begin()
+                { if(!is_moved) glEnd(); };
+            private:
+                const GLenum param;
+            };
+            
             struct custom : base {
                 custom(const std::function<void()> &dst)
                 : dst(dst)
@@ -591,6 +603,16 @@ namespace ofx {
                 { scoped_type(v).run(body); };
             };
             
+            struct gl_begin : base<scoped::gl_begin> {
+                using scoped_type = typename base<scoped::gl_begin>::scoped_type;
+                inline scoped_type operator()(GLenum &param) const
+                { return { param }; };
+                
+                inline void operator()(GLenum &param,
+                                       std::function<void()> body) const
+                { scoped_type(param).run(body); };
+            };
+            
             template <typename type>
             struct bind : base<scoped::bind<type>> {
                 using scoped_type = typename base<scoped::bind<type>>::scoped_type;
@@ -700,6 +722,8 @@ namespace ofx {
             constexpr tag::begin<ofCamera> camera{};
             constexpr tag::begin<ofShader> shader{};
             constexpr tag::begin<ofMaterial> material{};
+            
+            constexpr tag::gl_begin glBegin{};
             
             constexpr tag::bindable bind{};
             constexpr tag::bind<ofTexture> bindTex{};
@@ -849,6 +873,7 @@ using ofxScopedCamera = ofxScope::scoped::begin<ofCamera>;
 using ofxScopedShader = ofxScope::scoped::begin<ofShader>;
 using ofxScopedMaterial = ofxScope::scoped::begin<ofMaterial>;
 
+using ofxScopedGLBegin = ofxScope::scoped::gl_begin;
 
 using ofxScopedBindTexture = ofxScope::scoped::bind<ofTexture>;
 
