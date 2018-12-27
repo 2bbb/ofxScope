@@ -309,6 +309,9 @@ namespace ofx {
             };
             
             struct custom : base {
+                custom(const std::function<void()> &dst)
+                : dst(dst)
+                {};
                 custom(const std::function<void()> &cns,
                        const std::function<void()> &dst)
                 : cns(cns)
@@ -322,8 +325,8 @@ namespace ofx {
                 ~custom()
                 { if(!is_moved) dst(); };
             private:
-                std::function<void()> cns{[]{}};
-                std::function<void()> dst{[]{}};
+                const std::function<void()> cns{[]{}};
+                const std::function<void()> dst{[]{}};
             };
         }; // end of namespace scoped
         
@@ -369,15 +372,14 @@ namespace ofx {
                 { scoped_type().run(body); };
                 inline void operator()(bool with_close, std::function<void()> body) const
                 { scoped_type(with_close).run(body); };
-
-                struct open_t : base<scoped_type, open_t> {
+                
+                template <bool is_closed>
+                struct mode_t : base<scoped_type, mode_t<is_closed>> {
                     static scoped_type create_scope()
-                    { return {}; };
-                } open;
-                struct closed_t : base<scoped_type, closed_t> {
-                    static scoped_type create_scope()
-                    { return { true }; };
-                } closed;
+                    { return { is_closed }; };
+                };
+                const mode_t<false> open{};
+                const mode_t<true> closed{};
             };
             
             struct save_screen_as_pdf : base<scoped::save_screen_as_pdf> {
@@ -406,15 +408,14 @@ namespace ofx {
                 inline void operator()(bool enable,
                                        std::function<void()> body) const
                 { scoped_type(enable).run(body); };
-
-                struct enabler : base<scoped_type, enabler> {
+                
+                template <bool is_enabled>
+                struct mode_t : base<scoped_type, mode_t<is_enabled>> {
                     static scoped_type create_scope()
-                    {  return { true }; }
-                } enable;
-                struct disabler : base<scoped_type, disabler> {
-                    static scoped_type create_scope()
-                    {  return { false }; }
-                } disable;
+                    { return { is_enabled }; };
+                };
+                const mode_t<true> enable{};
+                const mode_t<false> disable{};
             };
             
             using depth_test    = bool_parameter<scoped::depth_test>;
@@ -431,15 +432,13 @@ namespace ofx {
                                        std::function<void()> body) const
                 { scoped_type(mode).run(body); };
 
-                
-                struct corner_t : base<scoped::rect_mode, corner_t> {
+                template <ofRectMode mode>
+                struct mode_t : base<scoped::rect_mode, mode_t<mode>> {
                     static scoped_type create_scope()
-                    { return { OF_RECTMODE_CORNER }; };
-                } corner;
-                struct center_t : base<scoped::rect_mode, center_t> {
-                    static scoped_type create_scope()
-                    { return { OF_RECTMODE_CENTER }; };
-                } center;
+                    { return { mode }; };
+                };
+                const mode_t<OF_RECTMODE_CORNER> corner{};
+                const mode_t<OF_RECTMODE_CENTER> center{};
             };
             
             struct blend_mode : base<scoped::blend_mode> {
@@ -448,6 +447,18 @@ namespace ofx {
                 inline void operator()(ofBlendMode mode,
                                        std::function<void()> body) const
                 { scoped_type(mode).run(body); };
+                
+                template <ofBlendMode mode>
+                struct mode_t : base<scoped_type, mode_t<mode>> {
+                    static scoped_type create_scope()
+                    { return { mode }; };
+                };
+                const mode_t<OF_BLENDMODE_DISABLED> disable{};
+                const mode_t<OF_BLENDMODE_ALPHA> alpha{};
+                const mode_t<OF_BLENDMODE_ADD> add{};
+                const mode_t<OF_BLENDMODE_SUBTRACT> subtract{};
+                const mode_t<OF_BLENDMODE_MULTIPLY> multiply{};
+                const mode_t<OF_BLENDMODE_SCREEN> screen{};
 
                 struct alpha_blending : base<scoped::blend_mode> {
                     using scoped_type = scoped::blend_mode;
@@ -456,14 +467,13 @@ namespace ofx {
                     inline scoped_type operator()(bool enable) const
                     { return { enable ? OF_BLENDMODE_ALPHA : OF_BLENDMODE_DISABLED }; };
                     
-                    struct enabler : base<scoped::blend_mode, enabler> {
+                    template <ofBlendMode mode>
+                    struct mode_t : base<scoped_type, mode_t<mode>> {
                         static scoped_type create_scope()
-                        { return { OF_BLENDMODE_ALPHA }; };
-                    } enable;
-                    struct disabler : base<scoped::blend_mode, disabler> {
-                        static scoped_type create_scope()
-                        { return { OF_BLENDMODE_DISABLED }; };
-                    } disable;
+                        { return { mode }; };
+                    };
+                    const mode_t<OF_BLENDMODE_ALPHA> enable{};
+                    const mode_t<OF_BLENDMODE_DISABLED> disable{};
                 };
             };
             
@@ -473,15 +483,14 @@ namespace ofx {
                 inline void operator()(ofFillFlag flag,
                                        std::function<void()> body) const
                 { scoped_type(flag).run(body); };
-
-                struct no_fill_t : base<scoped::fill_mode, no_fill_t> {
+                
+                template <ofFillFlag flag>
+                struct mode_t : base<scoped_type, mode_t<flag>> {
                     static scoped_type create_scope()
-                    { return { OF_OUTLINE }; };
-                } noFill;
-                struct fill_t : base<scoped::fill_mode, fill_t> {
-                    static scoped_type create_scope()
-                    { return { OF_FILLED }; };
-                } fill;
+                    { return { flag }; };
+                };
+                const mode_t<OF_OUTLINE> noFill{};
+                const mode_t<OF_FILLED> fill{};
             };
             
             struct line_width : base<scoped::line_width> {
@@ -617,80 +626,85 @@ namespace ofx {
         };
         
         namespace {
-            constexpr tag::matrix matrix;
-            constexpr tag::style style;
-            constexpr tag::view view;
+            constexpr tag::matrix matrix{};
+            constexpr tag::style style{};
+            constexpr tag::view view{};
             
-            constexpr tag::shape shape;
-            constexpr tag::shape::open_t openShape;
-            constexpr tag::shape::closed_t closedShape;
+            constexpr tag::shape shape{};
+            constexpr tag::shape::mode_t<false> openShape{};
+            constexpr tag::shape::mode_t<true> closedShape{};
 
-            constexpr tag::save_screen_as_pdf saveScreenAsPDF;
-            constexpr tag::save_screen_as_svg saveScreenAsSVG;
+            constexpr tag::save_screen_as_pdf saveScreenAsPDF{};
+            constexpr tag::save_screen_as_svg saveScreenAsSVG{};
             
-            constexpr tag::depth_test depthTest;
-            constexpr tag::depth_test::enabler enableDepthTest;
-            constexpr tag::depth_test::disabler disableDepthTest;
+            constexpr tag::depth_test depthTest{};
+            constexpr tag::depth_test::mode_t<true> enableDepthTest{};
+            constexpr tag::depth_test::mode_t<false> disableDepthTest{};
             
-            constexpr tag::anti_aliasing antiAliasing;
-            constexpr tag::anti_aliasing::enabler enableAntiAliasing;
-            constexpr tag::anti_aliasing::disabler disableAntiAliasing;
+            constexpr tag::anti_aliasing antiAliasing{};
+            constexpr tag::anti_aliasing::mode_t<true> enableAntiAliasing{};
+            constexpr tag::anti_aliasing::mode_t<false> disableAntiAliasing{};
             
-            constexpr tag::point_sprites pointSprites;
-            constexpr tag::point_sprites::enabler enablePointSprites;
-            constexpr tag::point_sprites::disabler disablePointSprites;
+            constexpr tag::point_sprites pointSprites{};
+            constexpr tag::point_sprites::mode_t<true> enablePointSprites{};
+            constexpr tag::point_sprites::mode_t<false> disablePointSprites{};
             
-            constexpr tag::arb_tex usingArbTex;
-            constexpr tag::arb_tex::enabler enableArbTex;
-            constexpr tag::arb_tex::disabler disableArbTex;
+            constexpr tag::arb_tex usingArbTex{};
+            constexpr tag::arb_tex::mode_t<true> enableArbTex{};
+            constexpr tag::arb_tex::mode_t<false> disableArbTex{};
             
-            constexpr tag::smoothing smoothing;
-            constexpr tag::smoothing::enabler enableSmoothing;
-            constexpr tag::smoothing::disabler disableSmoothing;
+            constexpr tag::smoothing smoothing{};
+            constexpr tag::smoothing::mode_t<true> enableSmoothing{};
+            constexpr tag::smoothing::mode_t<false> disableSmoothing{};
             
-            constexpr tag::lighting lighting;
-            constexpr tag::lighting::enabler enableLighting;
-            constexpr tag::lighting::disabler disableLighting;
+            constexpr tag::lighting lighting{};
+            constexpr tag::lighting::mode_t<true> enableLighting{};
+            constexpr tag::lighting::mode_t<false> disableLighting{};
             
-            constexpr tag::rect_mode rectMode;
-            constexpr tag::rect_mode::corner_t rectModeCorner;
-            constexpr tag::rect_mode::center_t rectModeCenter;
+            constexpr tag::rect_mode rectMode{};
+            constexpr tag::rect_mode::mode_t<OF_RECTMODE_CORNER> rectModeCorner{};
+            constexpr tag::rect_mode::mode_t<OF_RECTMODE_CENTER> rectModeCenter{};
             
-            constexpr tag::blend_mode blendMode;
-            constexpr tag::blend_mode::alpha_blending alphaBlending;
-            constexpr tag::blend_mode::alpha_blending::enabler enableAlphaBlending;
-            constexpr tag::blend_mode::alpha_blending::disabler disableAlphaBlending;
+            constexpr tag::blend_mode blendMode{};
+            constexpr tag::blend_mode::mode_t<OF_BLENDMODE_ALPHA> blendModeAlpha{};
+            constexpr tag::blend_mode::mode_t<OF_BLENDMODE_ADD> blendModeAdd{};
+            constexpr tag::blend_mode::mode_t<OF_BLENDMODE_SUBTRACT> blendModeSubtract{};
+            constexpr tag::blend_mode::mode_t<OF_BLENDMODE_MULTIPLY> blendModeMultiply{};
+            constexpr tag::blend_mode::mode_t<OF_BLENDMODE_SCREEN> blendModeScreen{};
+            constexpr tag::blend_mode::alpha_blending alphaBlending{};
+            constexpr tag::blend_mode::alpha_blending::mode_t<OF_BLENDMODE_ALPHA> enableAlphaBlending{};
+            constexpr tag::blend_mode::alpha_blending::mode_t<OF_BLENDMODE_DISABLED> disableAlphaBlending{};
             
-            constexpr tag::fill_mode fillMode;
-            constexpr tag::fill_mode::no_fill_t noFill;
-            constexpr tag::fill_mode::fill_t fill;
+            constexpr tag::fill_mode fillMode{};
+            constexpr tag::fill_mode::mode_t<OF_OUTLINE> noFill{};
+            constexpr tag::fill_mode::mode_t<OF_FILLED> fill{};
 #if 10 <= OF_VERSION_MINOR
             // matrix_mode
             // poly_mode
 #endif
-            constexpr tag::line_width lineWidth;
+            constexpr tag::line_width lineWidth{};
             
-            constexpr tag::circle_resolution circleResolution;
-            constexpr tag::curve_resolution curveResolution;
-            constexpr tag::sphere_resolution sphereResolution;
-            constexpr tag::ico_sphere_resolution icoSphereResolution;
+            constexpr tag::circle_resolution circleResolution{};
+            constexpr tag::curve_resolution curveResolution{};
+            constexpr tag::sphere_resolution sphereResolution{};
+            constexpr tag::ico_sphere_resolution icoSphereResolution{};
             
-            constexpr tag::box_resolution boxResolution;
-            constexpr tag::cone_resolution coneResolution;
-            constexpr tag::cylinder_resolution cylinderResolution;
+            constexpr tag::box_resolution boxResolution{};
+            constexpr tag::cone_resolution coneResolution{};
+            constexpr tag::cylinder_resolution cylinderResolution{};
             
-            constexpr tag::plane_resolution planeResolution;
+            constexpr tag::plane_resolution planeResolution{};
             
-            constexpr tag::beginable begin;
-            constexpr tag::begin<ofFbo> fbo;
-            constexpr tag::begin<ofCamera> camera;
-            constexpr tag::begin<ofShader> shader;
-            constexpr tag::begin<ofMaterial> material;
+            constexpr tag::beginable begin{};
+            constexpr tag::begin<ofFbo> fbo{};
+            constexpr tag::begin<ofCamera> camera{};
+            constexpr tag::begin<ofShader> shader{};
+            constexpr tag::begin<ofMaterial> material{};
             
-            constexpr tag::bindable bind;
-            constexpr tag::bind<ofTexture> bindTex;
+            constexpr tag::bindable bind{};
+            constexpr tag::bind<ofTexture> bindTex{};
             
-            constexpr tag::custom custom;
+            constexpr tag::custom custom{};
         };
         
         namespace detail {
@@ -800,7 +814,46 @@ namespace ofx {
 };
 
 namespace ofxScope = ofx::scope;
+
 using ofxScopedMatrix = ofxScope::scoped::matrix;
+using ofxScopedStyle = ofxScope::scoped::style;
+using ofxScopedView = ofxScope::scoped::style;
+using ofxScopedShape = ofxScope::scoped::style;
+
+using ofxScopedDepthTest = ofxScope::scoped::depth_test;
+using ofxScopedAntiAliasing = ofxScope::scoped::anti_aliasing;
+using ofxScopedPointSprites = ofxScope::scoped::point_sprites;
+using ofxScopedUsingArbTex = ofxScope::scoped::arb_tex;
+using ofxScopedSmoothing = ofxScope::scoped::smoothing;
+using ofxScopedLighting = ofxScope::scoped::lighting;
+
+using ofxScopedRectMode = ofxScope::scoped::rect_mode;
+using ofxScopedBlendMode = ofxScope::scoped::blend_mode;
+using ofxScopedFillMode = ofxScope::scoped::fill_mode;
+
+using ofxScopedLineWidth = ofxScope::scoped::line_width;
+
+using ofxScopedCircleResolution = ofxScope::scoped::circle_resolution;
+using ofxScopedCurveResolution = ofxScope::scoped::curve_resolution;
+using ofxScopedSphereResolution = ofxScope::scoped::sphere_resolution;
+using ofxScopedIcoSphereResolution = ofxScope::scoped::ico_sphere_resolution;
+
+using ofxScopedBoxResolution = ofxScope::scoped::box_resolution;
+using ofxScopedConeResolution = ofxScope::scoped::cone_resolution;
+using ofxScopedCylinderResolution = ofxScope::scoped::cylinder_resolution;
+
+using ofxScopedPlaneResolution = ofxScope::scoped::plane_resolution;
+
+using ofxScopedBegin = ofxScope::scoped::begin;
+using ofxScopedFbo = ofxScope::scoped::begin;
+using ofxScopedCamera = ofxScope::scoped::begin;
+using ofxScopedShader = ofxScope::scoped::begin;
+using ofxScopedMaterial = ofxScope::scoped::begin;
+
+using ofxScopedBind = ofxScope::scoped::bind;
+using ofxScopedBindTexture = ofxScope::scoped::bind;
+
+using ofxScoped = ofxScope::scoped::custom;
 
 template <typename ... types>
 auto ofxCreateScope(types && ...vs)
