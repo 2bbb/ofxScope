@@ -604,11 +604,10 @@ namespace ofx {
             };
             
             struct gl_begin : base<scoped::gl_begin> {
-                using scoped_type = typename base<scoped::gl_begin>::scoped_type;
-                inline scoped_type operator()(GLenum &param) const
+                inline scoped_type operator()(GLenum param) const
                 { return { param }; };
                 
-                inline void operator()(GLenum &param,
+                inline void operator()(GLenum param,
                                        std::function<void()> body) const
                 { scoped_type(param).run(body); };
             };
