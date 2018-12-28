@@ -264,6 +264,14 @@ namespace ofx {
             using blend_mode = accessor_pattern<accessor::blend_mode>;
             using fill_mode = accessor_pattern<accessor::fill_mode>;
             
+            namespace detail {
+                bool get_gl_bool(GLenum param) {
+                    GLboolean v{0};
+                    glGetBooleanv(param, &v);
+                    return static_cast<bool>(v);
+                }
+            };
+            
 #if 10 <= OF_VERSION_MINOR
 //            using matrix_mode = accessor_pattern<accessor::matrix_mode>;
 //            using poly_mode = accessor_pattern<accessor::polys_mode>;
@@ -319,6 +327,76 @@ namespace ofx {
             private:
                 const GLenum param;
             };
+            
+            struct gl_set_enabled : base {
+                gl_set_enabled(GLenum param, bool enable)
+                : param(param)
+                , saved(scoped::detail::get_gl_bool(param))
+                { set(param); };
+                gl_set_enabled(gl_set_enabled &&rhs)
+                : base(std::move(rhs))
+                , param(rhs.param)
+                {};
+                ~gl_set_enabled()
+                { if(!is_moved) set(saved); };
+                
+            private:
+                inline void set(bool is_enabled) const {
+                    if(is_enabled) glEnable(param);
+                    else glDisable(param);
+                }
+                const GLenum param;
+                GLboolean saved;
+            };
+            
+            struct gl_enable : gl_set_enabled {
+                gl_enable(GLenum param)
+                : gl_set_enabled(param, true)
+                {};
+            };
+            
+            struct gl_disable : gl_set_enabled {
+                gl_disable(GLenum param)
+                : gl_set_enabled(param, false)
+                {};
+            };
+            
+            // glEnableClientState, glDisableClientState
+            
+            struct gl_set_client_state_enabled : base {
+                gl_set_client_state_enabled(GLenum param, bool enable)
+                : param(param)
+                , saved(scoped::detail::get_gl_bool(param))
+                { set(param); };
+                gl_set_client_state_enabled(gl_set_client_state_enabled &&rhs)
+                : base(std::move(rhs))
+                , param(rhs.param)
+                {};
+                ~gl_set_client_state_enabled()
+                { if(!is_moved) set(saved); };
+                
+            private:
+                inline void set(bool is_enabled) const {
+                    if(is_enabled) glEnableClientState(param);
+                    else glDisableClientState(param);
+                }
+                const GLenum param;
+                GLboolean saved;
+            };
+
+            struct gl_enable_client_state : gl_set_client_state_enabled {
+                gl_enable_client_state(GLenum param)
+                : gl_set_client_state_enabled(param, true)
+                {};
+            };
+            
+            struct gl_disable_client_state : gl_set_client_state_enabled {
+                gl_disable_client_state(GLenum param)
+                : gl_set_client_state_enabled(param, false)
+                {};
+            };
+
+            // glNewList, glEndlist
             
             struct custom : base {
                 custom(const std::function<void()> &dst)
@@ -612,6 +690,64 @@ namespace ofx {
                 { scoped_type(param).run(body); };
             };
             
+            struct gl_set_enabled : base<scoped::gl_set_enabled> {
+                inline scoped_type operator()(GLenum param, bool is_enabled) const
+                { return { param, is_enabled }; };
+                
+                inline void operator()(GLenum param, bool is_enabled,
+                                       std::function<void()> body) const
+                { scoped_type(param, is_enabled).run(body); };
+            };
+            
+            struct gl_enable : base<scoped::gl_enable> {
+                inline scoped_type operator()(GLenum param) const
+                { return { param }; };
+                
+                inline void operator()(GLenum param,
+                                       std::function<void()> body) const
+                { scoped_type(param).run(body); };
+            };
+
+            struct gl_disable : base<scoped::gl_disable> {
+                inline scoped_type operator()(GLenum param) const
+                { return { param }; };
+                
+                inline void operator()(GLenum param,
+                                       std::function<void()> body) const
+                { scoped_type(param).run(body); };
+            };
+            
+            // glEnableClientState, glDisableClientState
+            
+            struct gl_set_client_state_enabled : base<scoped::gl_set_client_state_enabled> {
+                inline scoped_type operator()(GLenum param, bool is_enabled) const
+                { return { param, is_enabled }; };
+                
+                inline void operator()(GLenum param, bool is_enabled,
+                                       std::function<void()> body) const
+                { scoped_type(param, is_enabled).run(body); };
+            };
+            
+            struct gl_enable_client_state : base<scoped::gl_enable_client_state> {
+                inline scoped_type operator()(GLenum param) const
+                { return { param }; };
+                
+                inline void operator()(GLenum param,
+                                       std::function<void()> body) const
+                { scoped_type(param).run(body); };
+            };
+            
+            struct gl_disable_client_state : base<scoped::gl_disable_client_state> {
+                inline scoped_type operator()(GLenum param) const
+                { return { param }; };
+                
+                inline void operator()(GLenum param,
+                                       std::function<void()> body) const
+                { scoped_type(param).run(body); };
+            };
+
+            // glNewList, glEndlist
+
             template <typename type>
             struct bind : base<scoped::bind<type>> {
                 using scoped_type = typename base<scoped::bind<type>>::scoped_type;
@@ -724,6 +860,14 @@ namespace ofx {
             
             constexpr tag::gl_begin glBegin{};
             
+            constexpr tag::gl_set_enabled glSetEnabled{};
+            constexpr tag::gl_enable glEnable{};
+            constexpr tag::gl_disable glDisable{};
+            
+            constexpr tag::gl_set_client_state_enabled glSetClientStateEnabled{};
+            constexpr tag::gl_enable_client_state glEnableClientState{};
+            constexpr tag::gl_disable_client_state glDisableClientState{};
+
             constexpr tag::bindable bind{};
             constexpr tag::bind<ofTexture> bindTex{};
             
@@ -873,6 +1017,14 @@ using ofxScopedShader = ofxScope::scoped::begin<ofShader>;
 using ofxScopedMaterial = ofxScope::scoped::begin<ofMaterial>;
 
 using ofxScopedGLBegin = ofxScope::scoped::gl_begin;
+
+using ofxScopedGLSetEnabled = ofxScope::scoped::gl_set_enabled;
+using ofxScopedGLEnable = ofxScope::scoped::gl_enable;
+using ofxScopedGLDisable = ofxScope::scoped::gl_disable;
+
+using ofxScopedGLSetClientStateEnabled = ofxScope::scoped::gl_set_client_state_enabled;
+using ofxScopedGLEnableClientState = ofxScope::scoped::gl_enable_client_state;
+using ofxScopedGLDisableClientState = ofxScope::scoped::gl_disable_client_state;
 
 using ofxScopedBindTexture = ofxScope::scoped::bind<ofTexture>;
 
