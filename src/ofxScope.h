@@ -318,7 +318,7 @@ namespace ofx {
             using fill_mode = accessor_pattern<accessor::fill_mode>;
             
             namespace detail {
-                bool get_gl_bool(GLenum param) {
+                inline bool get_gl_bool(GLenum param) {
                     GLboolean v{0};
                     glGetBooleanv(param, &v);
                     return static_cast<bool>(v);
