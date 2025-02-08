@@ -9,6 +9,12 @@
 #define ofxScope_h
 #endif
 
+#if OF_VERSION_MAJOR == 0 && 11 < OF_VERSION_MINOR
+#   define OFX_SCOPE_USE_CAIRO 0
+#else
+#   define OFX_SCOPE_USE_CAIRO 1
+#endif
+
 #pragma once
 
 #include <tuple>
@@ -18,6 +24,10 @@
 #include "of3dGraphics.h"
 #include "ofLight.h"
 #include "ofTexture.h"
+// TODO: add situation
+#if OFX_SCOPE_USE_CAIRO
+#include "ofGraphcsCairo.h"
+#endif
 
 #ifdef TARGET_OPENGLES
 #   ifndef TARGET_PROGRAMMABLE_GL
@@ -210,6 +220,7 @@ namespace ofx {
                 bool close;
             };
             
+#if OFX_SCOPE_USE_CAIRO
             struct save_screen_as_pdf : base {
                 save_screen_as_pdf()
                 { ofBeginSaveScreenAsPDF(ofToString(ofGetFrameNum()) + ".pdf"); }
@@ -231,6 +242,8 @@ namespace ofx {
                 ~save_screen_as_svg()
                 { if(!is_moved) ofEndSaveScreenAsSVG(); };
             };
+            
+#endif
             
             template <typename accessor>
             struct accessor_pattern : base {
@@ -380,6 +393,7 @@ namespace ofx {
                 } closed;
             };
             
+#if OFX_SCOPE_USE_CAIRO
             struct save_screen_as_pdf : base<scoped::save_screen_as_pdf> {
                 inline scoped_type operator()(const std::string &path) const
                 { return { path }; };
@@ -397,7 +411,8 @@ namespace ofx {
                                        std::function<void()> body) const
                 { scoped_type(path).run(body); };
             };
-            
+#endif
+
             template <typename type>
             struct bool_parameter : base<type> {
                 using scoped_type = typename base<type>::scoped_type;
@@ -625,9 +640,11 @@ namespace ofx {
             constexpr tag::shape::open_t openShape;
             constexpr tag::shape::closed_t closedShape;
 
+#if OFX_SCOPE_USE_CAIRO
             constexpr tag::save_screen_as_pdf saveScreenAsPDF;
             constexpr tag::save_screen_as_svg saveScreenAsSVG;
-            
+#endif
+
             constexpr tag::depth_test depthTest;
             constexpr tag::depth_test::enabler enableDepthTest;
             constexpr tag::depth_test::disabler disableDepthTest;
